@@ -14,7 +14,7 @@ int main(int argc, char *arg[]) {
 	// nmod_poly_t s[VOTERS],t[VOTERS][2],_t[VOTERS][2],u[VOTERS][2];
 	// nmod_poly_t y[VOTERS][WIDTH][2], _y[VOTERS][WIDTH][2];
 
-	printf("Demonstracao do sistema de votacao E2Easy\n\n");
+	printf("Demonstracao do sistema de votacao Mixnet\n\n");
 
 	Setup();
 
@@ -171,73 +171,73 @@ int main(int argc, char *arg[]) {
 	// lerArquivoZKP ("ZKPOutput_Cont0", rho, beta,
 	// 				s, d, t, _t, u, y, _y, totalVoters);
 
-	// if(totalVoters > 0) {
-	// 	if ((infoContest & 0x1) != 0) {
-	// 		printf("\n\n\nPara cargo Deputado Federal");
-	// 		validateRDV("RDVOutput_Cont0", "RDVOutputSig_Cont0", totalVoters);
+	if(totalVoters > 0) {
+		if ((infoContest & 0x1) != 0) {
+			printf("\n\n\nPara cargo Deputado Federal");
+			validateRDV("RDVOutput_Cont0", "RDVOutputSig_Cont0", totalVoters);
 
-	// 		validateVoteOutput ("voteOutput_Cont0", "voteOutputSig_Cont0", totalVoters);
+			validateVoteOutput ("voteOutput_Cont0", "voteOutputSig_Cont0", totalVoters);
 
-	// 		validateZKPOutput ("ZKPOutput_Cont0", "SigZKPOutput_Cont0", 
-	// 						"RDVOutput_Cont0", "voteOutput_Cont0",  
-	// 						totalVoters);
-	// 	}
+			// validateZKPOutput ("ZKPOutput_Cont0", "SigZKPOutput_Cont0", 
+			// 				"RDVOutput_Cont0", "voteOutput_Cont0",  
+			// 				totalVoters);
+		}
 
-	// 	if ((infoContest & 0x2) != 0) {
-	// 		printf("\n\n\nPara cargo Deputado Estadual");
-	// 		validateRDV("RDVOutput_Cont1", "RDVOutputSig_Cont1", totalVoters);
+		if ((infoContest & 0x2) != 0) {
+			printf("\n\n\nPara cargo Deputado Estadual");
+			validateRDV("RDVOutput_Cont1", "RDVOutputSig_Cont1", totalVoters);
 
-	// 		validateVoteOutput ("voteOutput_Cont1", "voteOutputSig_Cont1", totalVoters);
+			validateVoteOutput ("voteOutput_Cont1", "voteOutputSig_Cont1", totalVoters);
 
-	// 		validateZKPOutput ("ZKPOutput_Cont1", "SigZKPOutput_Cont1", 
-	// 						"RDVOutput_Cont1", "voteOutput_Cont1", 
-	// 						totalVoters);
-	// 	}
+			// validateZKPOutput ("ZKPOutput_Cont1", "SigZKPOutput_Cont1", 
+			// 				"RDVOutput_Cont1", "voteOutput_Cont1", 
+			// 				totalVoters);
+		}
 
-	// 	if ((infoContest & 0x4) != 0) {
-	// 		printf("\n\n\nPara cargo Senador 1");
-	// 		validateRDV("RDVOutput_Cont2", "RDVOutputSig_Cont2", totalVoters);
+		if ((infoContest & 0x4) != 0) {
+			printf("\n\n\nPara cargo Senador 1");
+			validateRDV("RDVOutput_Cont2", "RDVOutputSig_Cont2", totalVoters);
 
-	// 		validateVoteOutput ("voteOutput_Cont2", "voteOutputSig_Cont2", totalVoters);
+			validateVoteOutput ("voteOutput_Cont2", "voteOutputSig_Cont2", totalVoters);
 
-	// 		validateZKPOutput ("ZKPOutput_Cont2", "SigZKPOutput_Cont2", 
-	// 						"RDVOutput_Cont2", "voteOutput_Cont2", 
-	// 						totalVoters);
-	// 	}
+			// validateZKPOutput ("ZKPOutput_Cont2", "SigZKPOutput_Cont2", 
+			// 				"RDVOutput_Cont2", "voteOutput_Cont2", 
+			// 				totalVoters);
+		}
 
-	// 	if ((infoContest & 0x8) != 0) {
-	// 		printf("\n\n\nPara cargo Senador 2");
-	// 		validateRDV("RDVOutput_Cont3", "RDVOutputSig_Cont3", totalVoters);
+		if ((infoContest & 0x8) != 0) {
+			printf("\n\n\nPara cargo Senador 2");
+			validateRDV("RDVOutput_Cont3", "RDVOutputSig_Cont3", totalVoters);
 
-	// 		validateVoteOutput ("voteOutput_Cont3", "voteOutputSig_Cont3", totalVoters);
+			validateVoteOutput ("voteOutput_Cont3", "voteOutputSig_Cont3", totalVoters);
 
-	// 		validateZKPOutput ("ZKPOutput_Cont3", "SigZKPOutput_Cont3", 
-	// 						"RDVOutput_Cont3", "voteOutput_Cont3",  
-	// 						totalVoters);
-	// 	}
+			// validateZKPOutput ("ZKPOutput_Cont3", "SigZKPOutput_Cont3", 
+			// 				"RDVOutput_Cont3", "voteOutput_Cont3",  
+			// 				totalVoters);
+		}
 
-	// 	if ((infoContest & 0x10) != 0) {
-	// 		printf("\n\n\nPara cargo Governador");
-	// 		validateRDV("RDVOutput_Cont4", "RDVOutputSig_Cont4", totalVoters);
+		if ((infoContest & 0x10) != 0) {
+			printf("\n\n\nPara cargo Governador");
+			validateRDV("RDVOutput_Cont4", "RDVOutputSig_Cont4", totalVoters);
 
-	// 		validateVoteOutput ("voteOutput_Cont4", "voteOutputSig_Cont4", totalVoters);
+			validateVoteOutput ("voteOutput_Cont4", "voteOutputSig_Cont4", totalVoters);
 
-	// 		validateZKPOutput ("ZKPOutput_Cont4", "SigZKPOutput_Cont4", 
-	// 						"RDVOutput_Cont4", "voteOutput_Cont4",
-	// 						totalVoters);
-	// 	}
+			// validateZKPOutput ("ZKPOutput_Cont4", "SigZKPOutput_Cont4", 
+			// 				"RDVOutput_Cont4", "voteOutput_Cont4",
+			// 				totalVoters);
+		}
 
-	// 	if ((infoContest & 0x20) != 0) {
-	// 		printf("\n\n\nPara cargo Presidente");
-	// 		validateRDV("RDVOutput_Cont5", "RDVOutputSig_Cont5", totalVoters);
+		if ((infoContest & 0x20) != 0) {
+			printf("\n\n\nPara cargo Presidente");
+			validateRDV("RDVOutput_Cont5", "RDVOutputSig_Cont5", totalVoters);
 
-	// 		validateVoteOutput ("voteOutput_Cont5", "voteOutputSig_Cont5", totalVoters);
+			validateVoteOutput ("voteOutput_Cont5", "voteOutputSig_Cont5", totalVoters);
 
-	// 		validateZKPOutput ("ZKPOutput_Cont5", "SigZKPOutput_Cont5", 
-	// 						"RDVOutput_Cont5", "voteOutput_Cont5", 
-	// 						totalVoters);
-	// 	}
-	// }
+			// validateZKPOutput ("ZKPOutput_Cont5", "SigZKPOutput_Cont5", 
+			// 				"RDVOutput_Cont5", "voteOutput_Cont5", 
+			// 				totalVoters);
+		}
+	}
 	
 	// printf("\n\n\n\n\n");
 	// for (int z = 0; z < totalVoters; z++){

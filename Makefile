@@ -39,13 +39,11 @@ votingSimulator: votingSimulator.c commit.c ${TEST} ${BENCH}
 	${CPP} ${CFLAGS} -c commit.c -o commit.o ${LIBS}
 	${CPP} ${CFLAGS} -DMAIN votingSimulator.c commit.o sha224-256.c sha384-512.c ${GAUSSIAN} ${TEST} ${BENCH} -o votingSimulator ${LIBS}
 
-APISimulator: APITest.c APISimulator.c APISimulator.h commit.c
-	${CPP} ${CFLAGS} -DSIGMA_PARAM=SIGMA_C -c gaussian_ct.cpp -o gaussian.o
-	${CPP} ${CFLAGS} -L${DILITHIUM_PATH} -L${RELIC_PATH} -I${DILITHIUM_PATH} -I${RELIC_PATH} APITest.c APISimulator.c commit.c sha224-256.c sha384-512.c ${GAUSSIAN} ${DIL_LIBS} ${LIBS} -o APITest -Wl,-R${RELIC_PATH} -Wl,-R${DILITHIUM_PATH}
+APISimulator: APITest.c APISimulator.c APISimulator.h
+	${CPP} ${CFLAGS} -L${RELIC_PATH} -I${RELIC_PATH} APITest.c APISimulator.c sha224-256.c sha384-512.c ${LIBS} -o APITest -Wl,-R${RELIC_PATH}
 
-APIBench: APIBench.c APISimulator.c APISimulator.h commit.c ${TEST} ${BENCH}
-	${CPP} ${CFLAGS} -DSIGMA_PARAM=SIGMA_C -c gaussian_ct.cpp -o gaussian.o
-	${CPP} ${CFLAGS} -L${DILITHIUM_PATH} -L${RELIC_PATH} -I${DILITHIUM_PATH} -I${RELIC_PATH} APIBench.c APISimulator.c commit.c sha224-256.c sha384-512.c ${GAUSSIAN} ${TEST} ${BENCH} ${DIL_LIBS} ${LIBS} -o APIBench -Wl,-R${RELIC_PATH} -Wl,-R${DILITHIUM_PATH}
+APIBench: APIBench.c APISimulator.c APISimulator.h
+	${CPP} ${CFLAGS} -L${RELIC_PATH} -I${RELIC_PATH} APIBench.c APISimulator.c sha224-256.c sha384-512.c ${LIBS} -o APIBench -Wl,-R${RELIC_PATH}
 
 spoilCheck: spoilCheck.c commit.c ${TEST} ${BENCH}
 	${CPP} ${CFLAGS} -DSIGMA_PARAM=SIGMA_C -c gaussian_ct.cpp -o gaussian.o

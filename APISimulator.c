@@ -73,67 +73,55 @@ static void insertionSort(uint32_t arr[], int n) {
 }
 
 
-// static void lerArquivoVoteOutput (char voteOutputName[20], uint8_t HTail[SHA512HashSize], uint8_t HHead[SHA512HashSize], 
-// 							uint8_t HTrackCode[VOTERS][SHA512HashSize], time_t vTime[VOTERS], commit_t com[VOTERS], int numVoters) {
-// 	FILE *voteOutput;
+static void lerArquivoVoteOutput (char voteOutputName[20], uint8_t HTail[SHA256HashSize], uint8_t HHead[SHA256HashSize], 
+							uint8_t HTrackCode[VOTERS][SHA256HashSize], time_t vTime[VOTERS], ec_t a[VOTERS], ec_t b[VOTERS], int numVoters) {
+	FILE *voteOutput;
+	uint8_t buffer[64];
 
-// 	for (int i = 0; i < numVoters; i++) {
-// 		for (int j = 0; j < 2; j++) {
-// 			nmod_poly_init(com[i].c1[j], MODP);
-// 			nmod_poly_init(com[i].c2[j], MODP);
-// 			nmod_poly_fit_length(com[i].c1[j], DEGCRT);
-// 			nmod_poly_fit_length(com[i].c2[j], DEGCRT);
-// 			nmod_poly_zero(com[i].c1[j]);
-// 			nmod_poly_zero(com[i].c2[j]);
-// 		}
-// 	}
 
-// 	voteOutput = fopen(voteOutputName,"r");
-// 	if (voteOutput != NULL) {
-// 		fread(HTail,sizeof(uint8_t),SHA512HashSize,voteOutput);
-// 		fread(HHead,sizeof(uint8_t),SHA512HashSize,voteOutput);
-// 		for (int i = 0; i < numVoters; i++) {
-// 			fread(HTrackCode[i],sizeof(uint8_t),SHA512HashSize,voteOutput);
-// 			fread(&vTime[i],sizeof(uint32_t),1,voteOutput);
-// 			for (int j = 0; j < 2; j++) {
-// 				com[i].c1[j]->length = DEGCRT;
-// 				com[i].c2[j]->length = DEGCRT;
+	for (int i = 0; i < numVoters; i++) {
+		ec_null(a[i]);
+		ec_null(b[i]);
+		ec_new(a[i]);		
+		ec_new(b[i]);
+	}
 
-// 				for (int coeff = 0; coeff < DEGCRT; coeff++) {
-// 					fread(com[i].c1[j]->coeffs+coeff, sizeof(uint32_t), 1, voteOutput);
-// 					*(com[i].c1[j]->coeffs+coeff)&=0xFFFFFFFF;
-// 				}
-				
-// 				for (int coeff = 0; coeff < DEGCRT; coeff++) {
-// 					fread(com[i].c2[j]->coeffs+coeff, sizeof(uint32_t), 1, voteOutput);
-// 					*(com[i].c2[j]->coeffs+coeff)&=0xFFFFFFFF;
-// 				}
-// 			}
-// 		}
-		
-// 	}
-// 	fclose(voteOutput);
-// }
+	voteOutput = fopen(voteOutputName,"r");
+	if (voteOutput != NULL) {
+		fread(HTail,sizeof(uint8_t),SHA256HashSize,voteOutput);
+		fread(HHead,sizeof(uint8_t),SHA256HashSize,voteOutput);
+		for (int i = 0; i < numVoters; i++) {
+			fread(HTrackCode[i],sizeof(uint8_t),SHA256HashSize,voteOutput);
+			fread(&vTime[i],sizeof(uint32_t),1,voteOutput);
+			fread(buffer,sizeof(uint8_t),64,voteOutput);
+			a[i]->coord = 1;
+			fp_read_bin(a[i]->x,buffer,32);
+			fp_read_bin(a[i]->y,buffer+32,32);
+			fp_read_str(a[i]->z,"1",1,16);
+			fread(buffer,sizeof(uint8_t),64,voteOutput);
+			b[i]->coord = 1;
+			fp_read_bin(b[i]->x,buffer,32);
+			fp_read_bin(b[i]->y,buffer+32,32);
+			fp_read_str(b[i]->z,"1",1,16);
+		}	
+	}
+	fclose(voteOutput);
+}
 
-// static void lerArquivoRDV (char RDVOutputName[20], nmod_poly_t _m[VOTERS], int numVoters) {
-// 	FILE *RDVOutput;
-// 	uint32_t vote;
+static void lerArquivoRDV (char RDVOutputName[20], uint32_t _m[VOTERS], int numVoters) {
+	FILE *RDVOutput;
+	uint32_t vote;
 
-// 	for (int i = 0; i < numVoters; i++) {
-// 		nmod_poly_init(_m[i], MODP);
-// 		nmod_poly_zero(_m[i]);
-// 	}
-
-// 	RDVOutput = fopen(RDVOutputName,"r");
-// 	if (RDVOutput != NULL) {
-// 		for (int i = 0; i < numVoters; i++) {
-// 			if (fscanf(RDVOutput,"%u",&vote) != EOF) {
-// 				nmod_poly_set_coeff_ui(_m[i],0,vote);
-// 			}
-// 		}
-// 	}
-// 	fclose(RDVOutput);
-// }
+	RDVOutput = fopen(RDVOutputName,"r");
+	if (RDVOutput != NULL) {
+		for (int i = 0; i < numVoters; i++) {
+			if (fscanf(RDVOutput,"%u",&vote) != EOF) {
+				_m[i]=vote;
+			}
+		}
+	}
+	fclose(RDVOutput);
+}
 
 // static void lerArquivoZKP (char ZKPOutputName[20], nmod_poly_t rho, nmod_poly_t beta,
 // 					nmod_poly_t s[VOTERS], commit_t d[VOTERS],
@@ -344,7 +332,9 @@ void Setup() {
 }
 
 void onStart (uint8_t infoContest) {
+	FILE *publicSignatureKey;
 	uint8_t Q[] = "Teste\0";
+	uint8_t buffer[32];
 	SHA256Context sha;
 	bn_t aux;
 	uint8_t overlineQ[SHA256HashSize];
@@ -352,9 +342,14 @@ void onStart (uint8_t infoContest) {
 	numberContests = 0;
 	bn_null(aux);
 	bn_new(aux);
+	bn_null(privSignKey);
+	bn_new(privSignKey);
+	ec_null(pubSignKey);
+	ec_new(pubSignKey);
+
 
 	/* Create Signature Key pair */
-	cp_ecdh_gen(privSignKey,pubSignKey);
+	cp_ecdsa_gen(privSignKey,pubSignKey);
 
 	/*Hash overlineQ=Hash(A,Q,PublicSignKey)*/
 	SHA256Reset(&sha);
@@ -421,6 +416,17 @@ void onStart (uint8_t infoContest) {
 	voteContestCasted = 0;
 
 	/*TODO: Output Sign public key and H0 */
+	publicSignatureKey = fopen("publicSignatureKey","wb");
+	if (publicSignatureKey != NULL) {
+		ec_get_x(aux,pubSignKey);
+		bn_write_bin(buffer,32,aux);
+		fwrite(buffer,sizeof(uint8_t),32,publicSignatureKey);
+		ec_get_y(aux,pubSignKey);
+		bn_write_bin(buffer,32,aux);
+		fwrite(buffer,sizeof(uint8_t),32,publicSignatureKey);
+		fclose(publicSignatureKey);
+	}
+
 
 	bn_free(aux);
 }
@@ -430,7 +436,7 @@ void onVoterActive(uint32_t vote, uint8_t cont) {
 	uint32_t timerInt;
 	uint8_t tempVote[4];
 	ec_t P;
-	// uint64_t *coeffs;
+	uint8_t buffer[64];
 	bn_t aux;
 
 	/* Check if the contest provided is within range and enabled*/
@@ -452,6 +458,7 @@ void onVoterActive(uint32_t vote, uint8_t cont) {
 		tempVote[3]=(vote>>24)&0xFF;
 		
 		ec_map(P,tempVote,4);
+		// ec_print(P);
 		
 
 		/* Draw r randomly and create the encryption */
@@ -490,17 +497,25 @@ void onVoterActive(uint32_t vote, uint8_t cont) {
 
 		SHA256Input(&sha, (const uint8_t*)&timerInt, 4);
 
-		ec_get_x(aux,a[cont]);
-		SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
+		fp_write_bin(buffer,32,a[cont]->x);
+		fp_write_bin(buffer+32,32,a[cont]->y);
+		SHA256Input(&sha, buffer, 64);
 
-		ec_get_y(aux,a[cont]);
-		SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
+		fp_write_bin(buffer,32,b[cont]->x);
+		fp_write_bin(buffer+32,32,b[cont]->y);
+		SHA256Input(&sha, buffer, 64);
 
-		ec_get_x(aux,b[cont]);
-		SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
+		// ec_get_x(aux,a[cont]);
+		// SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
 
-		ec_get_y(aux,b[cont]);
-		SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
+		// ec_get_y(aux,a[cont]);
+		// SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
+
+		// ec_get_x(aux,b[cont]);
+		// SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
+
+		// ec_get_y(aux,b[cont]);
+		// SHA256Input(&sha, (const uint8_t*)aux, bn_bits(aux)/8);
 
 		SHA256Result(&sha, trackingCode[cont]);
 
@@ -512,10 +527,6 @@ void onVoterActive(uint32_t vote, uint8_t cont) {
 }
 
 void onChallenge (bool cast) {
-	nmod_poly_t rnd;
-	uint32_t coeffValue;
-	uint8_t coeffSeq[DEGREE*2/8];
-	uint16_t index;
 	uint8_t numberActiveContests=0;
 
 	/* If vote is cast, store it on table */
@@ -590,9 +601,8 @@ void onChallenge (bool cast) {
 }
 
 void onFinish () {
-	FILE *voteOutput, *RDVOutput, *ciph;
+	FILE *voteOutput, *RDVOutput;
 	SHA256Context sha, shaRDV;
-	int res;
 	uint8_t closeSignal[] = "CLOSE\0";
 	uint8_t HashToSign[SHA256HashSize];
 	uint8_t Phex[32];
@@ -977,190 +987,229 @@ int createQRTrackingCode() {
 	
 // }
 
-// void validateRDV (char RDVOutputName[20], char RDVSigOutputName[20], int numVoters){
-// 	FILE *SigFile;
-// 	SHA512Context sha;
-// 	uint8_t hash[SHA512HashSize];
-// 	nmod_poly_t _m[VOTERS];
-// 	uint32_t vote;
-// 	uint8_t Signature[pqcrystals_dilithium2_BYTES];
-// 	int Success = -1;
+void validateRDV (char RDVOutputName[20], char RDVSigOutputName[20], int numVoters){
+	FILE *SigFile;
+	SHA256Context sha;
+	uint8_t hash[SHA256HashSize];
+	uint8_t buffer[64];
+	uint32_t _m[VOTERS];
+	ec_t publicKey;
+	bn_t Signature[2];
+	int Success = -1;
 
-// 	SHA512Reset(&sha);
-// 	lerArquivoRDV(RDVOutputName,_m,numVoters);
-// 	for (int i = 0; i < numVoters; i++) {
-// 		vote = nmod_poly_get_coeff_ui(_m[i],0);
-// 		SHA512Input(&sha, (const uint8_t*)&vote, 4);
-// 		SHA512Input(&sha, (const uint8_t*)"\n", 2);
-// 	}
-// 	SHA512Result(&sha, hash);
+	core_init();
+	ec_param_set_any();
 
-// 	SigFile = fopen(RDVSigOutputName, "r");
-// 	if(SigFile != NULL){
-// 		fread(Signature, sizeof(uint8_t), pqcrystals_dilithium2_BYTES, SigFile);
-// 	}
-// 	fclose(SigFile);
+	ec_null(publicKey);
+	ec_new(publicKey);
 
-// 	Success = pqcrystals_dilithium2aes_ref_verify(Signature, pqcrystals_dilithium2_BYTES,
-//                                         		 hash, SHA512HashSize,
-//                                         		 pubSignKey);
+	bn_null(Signature[0]);
+	bn_new(Signature[0]);
+	bn_null(Signature[1]);
+	bn_new(Signature[1]);
 
-// 	if (Success == 0){
-// 		printf("\nASSINATURA DO ARQUIVO RDV VERIFICADA COM SUCESSO!\n");
-// 	} else {
-// 		printf("\n\nERRO! -- ASSINATURA DO ARQUIVO RDV NAO VERIFICADA -- ERRO!\n\n");
-// 	}
+	SigFile = fopen("publicSignatureKey", "r");
+	if(SigFile != NULL){
+		fread(buffer, sizeof(uint8_t), 64, SigFile);
+		fclose(SigFile);
+	}
+	fp_read_bin(publicKey->x,buffer,32);
+	fp_read_bin(publicKey->y,buffer+32,32);
+	fp_read_str(publicKey->z,"1",1,16);
 
-// 	for(int i = 0; i < numVoters; i++) {
-// 		nmod_poly_clear(_m[i]);
-// 	}
-// }
+	// printf("\nPublic Key: ");
+	// ec_print(publicKey);
+	// printf("\n");
 
-// void validateVoteOutput (char voteOutputName[20], char voteSigOutputName[20], int numVoters){
-// 	FILE *SigFile;
-// 	SHA512Context sha;
-// 	uint8_t hash[SHA512HashSize];
-// 	uint32_t vote;
-// 	uint8_t Signature[pqcrystals_dilithium2_BYTES];
-// 	uint8_t HTail[SHA512HashSize];
-// 	uint8_t HHead[SHA512HashSize];
-// 	uint8_t HTrackCode[VOTERS][SHA512HashSize];
-// 	time_t vTime[VOTERS];
-// 	commit_t com[VOTERS];
-// 	int Success = -1;
-// 	uint64_t *coeffs;
-// 	int aux, result=1;
-// 	uint8_t HCurrent[SHA512HashSize];
-// 	uint8_t HNext[SHA512HashSize];
-// 	uint8_t closeSignal[] = "CLOSE\0";
+	
 
-// 	SHA512Reset(&sha);
+	SHA256Reset(&sha);
+	lerArquivoRDV(RDVOutputName,_m,numVoters);
+	for (int i = 0; i < numVoters; i++) {
+		SHA256Input(&sha, (const uint8_t*)&_m[i], 4);
+		SHA256Input(&sha, (const uint8_t*)"\n", 2);
+	}
+	SHA256Result(&sha, hash);
 
-// 	lerArquivoVoteOutput(voteOutputName, HTail, HHead, HTrackCode, vTime, com, numVoters);
+	SigFile = fopen(RDVSigOutputName, "r");
+	if(SigFile != NULL){
+		fread(buffer, sizeof(uint8_t), 64, SigFile);
+		fclose(SigFile);
+	}
+	bn_read_bin(Signature[0],buffer,32);
+	bn_read_bin(Signature[1],buffer+32,32);
 
-// 	SHA512Input(&sha, HTail, SHA512HashSize);
-// 	SHA512Input(&sha, HHead, SHA512HashSize);
+	Success = cp_ecdsa_ver(Signature[0], Signature[1], hash, 32, 1, publicKey);
 
-// 	/* Normalise polys to avoid leading zeros */
-// 	for (int i = 0; i < numVoters; i++) {
-// 		for (int j = 0; j < 2; j++) {
-// 			_nmod_poly_normalise(com[i].c1[j]);
-// 			_nmod_poly_normalise(com[i].c2[j]);
-// 		}
-// 	}	
+	if (Success == 1){
+		printf("\n\033[32mASSINATURA DO ARQUIVO RDV VERIFICADA COM SUCESSO!\033[0m\n");
+	} else {
+		printf("\n\n\033[31mERRO! -- ASSINATURA DO ARQUIVO RDV NAO VERIFICADA -- ERRO!\033[0m\n\n");
+	}
 
-// 	for (int i = 0; i < numVoters; i++) {
-// 		SHA512Input(&sha, HTrackCode[i], SHA512HashSize);
-// 		SHA512Input(&sha, (const uint8_t*)&vTime[i], 4);
-// 		for (int j = 0; j < 2; j++) {
-// 			HashMp_ptr(&sha, com[i].c1[j]->coeffs, sizeof(uint32_t), com[i].c1[j]->length);
-// 			HashMp_ptr(&sha, com[i].c2[j]->coeffs, sizeof(uint32_t), com[i].c2[j]->length);
-// 		}
-// 	}
-// 	SHA512Result(&sha, hash);
+	ec_free(publicKey);
+	bn_free(Signature[0]);
+	bn_free(Signature[1]);
+	core_clean();
+}
 
-// 	SigFile = fopen(voteSigOutputName, "r");
-// 	if(SigFile != NULL){
-// 		fread(Signature, sizeof(uint8_t), pqcrystals_dilithium2_BYTES, SigFile);
-// 	}
-// 	fclose(SigFile);
+void validateVoteOutput (char voteOutputName[20], char voteSigOutputName[20], int numVoters){
+	FILE *SigFile;
+	SHA256Context sha;
+	uint8_t hash[SHA256HashSize];
+	ec_t publicKey;
+	bn_t Signature[2];
+	uint8_t buffer[64];
+	ec_t a[VOTERS];
+	ec_t b[VOTERS];
+	uint8_t HTail[SHA256HashSize];
+	uint8_t HHead[SHA256HashSize];
+	uint8_t HTrackCode[VOTERS][SHA256HashSize];
+	time_t vTime[VOTERS];
+	int Success = -1;
+	int result=1;
+	uint8_t HCurrent[SHA256HashSize];
+	uint8_t HNext[SHA256HashSize];
+	uint8_t closeSignal[] = "CLOSE\0";
 
-// 	Success = pqcrystals_dilithium2aes_ref_verify(Signature, pqcrystals_dilithium2_BYTES,
-//                                         		 hash, SHA512HashSize,
-//                                         		 pubSignKey);
+	core_init();
+	ec_param_set_any();
 
-// 	if (Success == 0){
-// 		printf("\nASSINATURA DO ARQUIVO DE COMMITS VERIFICADA COM SUCESSO!\n");
-// 	} else {
-// 		printf("\n\nERRO! -- ASSINATURA DO ARQUIVO DE COMMITS NAO VERIFICADA -- ERRO!\n\n");
-// 	}
+	ec_null(publicKey);
+	ec_new(publicKey);
 
-// 	/* Check Commitment Chain*/
+	// for (int i = 0; i < VOTERS; i++) {
+	// 	ec_null(a[i]);
+	// 	ec_null(b[i]);
+	// 	ec_new(a[i]);		
+	// 	ec_new(b[i]);
+	// }
 
-// 	for (int j = 0; j < SHA512HashSize; j++){
-// 		HCurrent[j]=HTail[j];
-// 	}
+	bn_null(Signature[0]);
+	bn_new(Signature[0]);
+	bn_null(Signature[1]);
+	bn_new(Signature[1]);
 
-// 	for(int i = 0; i < numVoters; i++){
-		
-// 		/* Parse the commitment to coeffs variable */
-// 		aux = 0;
-// 		coeffs = (uint64_t*)malloc(sizeof(uint64_t)*(nmod_poly_length(com[i].c1[0])+
-// 														nmod_poly_length(com[i].c1[1])+
-// 														nmod_poly_length(com[i].c2[0])+
-// 															nmod_poly_length(com[i].c2[1])));
+	SigFile = fopen("publicSignatureKey", "r");
+	if(SigFile != NULL){
+		fread(buffer, sizeof(uint8_t), 64, SigFile);
+		fclose(SigFile);
+	}
+	fp_read_bin(publicKey->x,buffer,32);
+	fp_read_bin(publicKey->y,buffer+32,32);
+	fp_read_str(publicKey->z,"1",1,16);
 
-// 		for (int w = 0; w < nmod_poly_length(com[i].c1[0]); w++){
-// 			coeffs[w] = nmod_poly_get_coeff_ui(com[i].c1[0],w);
-// 		}
-// 		aux = nmod_poly_length(com[i].c1[0]);
+	// printf("\nPublic Key: ");
+	// ec_print(publicKey);
+	// printf("\n");
 
-// 		for (int w = 0; w < nmod_poly_length(com[i].c1[1]); w++){
-// 			coeffs[w+aux] = nmod_poly_get_coeff_ui(com[i].c1[1],w);
-// 		}
-// 		aux+=nmod_poly_length(com[i].c1[1]);
+	SHA256Reset(&sha);
 
-// 		for (int w = 0; w < nmod_poly_length(com[i].c2[0]); w++){
-// 			coeffs[w+aux] = nmod_poly_get_coeff_ui(com[i].c2[0],w);
-// 		}
-// 		aux+=nmod_poly_length(com[i].c2[0]);
+	lerArquivoVoteOutput(voteOutputName, HTail, HHead, HTrackCode, vTime, a, b, numVoters);
 
-// 		for (int w = 0; w < nmod_poly_length(com[i].c2[1]); w++){
-// 			coeffs[w+aux] = nmod_poly_get_coeff_ui(com[i].c2[1],w);
-// 		}
-// 		aux+=nmod_poly_length(com[i].c2[1]);
+	SHA256Input(&sha, HTail, SHA256HashSize);
+	// for (int j = 0; j <)
+	SHA256Input(&sha, HHead, SHA256HashSize);
 
+	for (int i = 0; i < numVoters; i++) {
+		SHA256Input(&sha, HTrackCode[i], SHA256HashSize);
+		SHA256Input(&sha, (const uint8_t*)&vTime[i], 4);
+		fp_write_bin(buffer,32,a[i]->x);
+		fp_write_bin(buffer+32,32,a[i]->y);
+		SHA256Input(&sha, buffer, 64);
+		fp_write_bin(buffer,32,b[i]->x);
+		fp_write_bin(buffer+32,32,b[i]->y);
+		SHA256Input(&sha, buffer, 64);
+	}
+	SHA256Result(&sha, hash);
 
-// 		/* Compute next tracking code */
-// 		SHA512Reset(&sha);
+	SigFile = fopen(voteSigOutputName, "r");
+	if(SigFile != NULL){
+		fread(buffer, sizeof(uint8_t), 64, SigFile);
+		fclose(SigFile);
+	}
+	bn_read_bin(Signature[0],buffer,32);
+	bn_read_bin(Signature[1],buffer+32,32);
 
-// 		SHA512Input(&sha, HCurrent, SHA512HashSize);
+	Success = cp_ecdsa_ver(Signature[0], Signature[1], hash, 32, 1, publicKey);
 
-// 		SHA512Input(&sha, (const uint8_t*)&vTime[i], 4);
+	
+	if (Success == 1){
+		printf("\n\033[32mASSINATURA DO ARQUIVO DE CIFRAS VERIFICADA COM SUCESSO!\033[0m\n");
+	} else {
+		printf("\n\n\033[31mERRO! -- ASSINATURA DO ARQUIVO DE CIFRAS NAO VERIFICADA -- ERRO!\033[0m\n\n");
+	}
 
-// 		SHA512Input(&sha, (const uint8_t*)coeffs, aux * sizeof(uint64_t));
+	/* Check Commitment Chain*/
 
-// 		SHA512Result(&sha, HNext);
+	for (int j = 0; j < SHA256HashSize; j++){
+		HCurrent[j]=HTail[j];
+		// printf("%02x ",HCurrent[j]);
+	}
+	// printf("\n\n");
 
-// 		free(coeffs);
+	for(int i = 0; i < numVoters; i++){
 
-// 		for (int j = 0; j < SHA512HashSize; j++){
-// 			if(HNext[j]!=HTrackCode[i][j]){
-// 				result = 0;
-// 			}
-// 		}
+		/* Compute next tracking code */
+		SHA256Reset(&sha);
 
-// 		for (int j = 0; j < SHA512HashSize; j++){
-// 			HCurrent[j]=HNext[j];
-// 		}
+		SHA256Input(&sha, HCurrent, SHA256HashSize);
 
-// 	}
-// 	/* Compute HHead */
-// 	SHA512Reset(&sha);
+		SHA256Input(&sha, (const uint8_t*)&vTime[i], 4);
 
-// 	SHA512Input(&sha, HCurrent, SHA512HashSize);
+		fp_write_bin(buffer,32,a[i]->x);
+		fp_write_bin(buffer+32,32,a[i]->y);
+		SHA256Input(&sha, buffer, 64);
 
-// 	SHA512Input(&sha, (const uint8_t*)closeSignal, strlen((char *)closeSignal));
+		fp_write_bin(buffer,32,b[i]->x);
+		fp_write_bin(buffer+32,32,b[i]->y);
+		SHA256Input(&sha, buffer, 64);
 
-// 	SHA512Result(&sha, HNext);
+		SHA256Result(&sha, HNext);
 
-// 	for (int j = 0; j < SHA512HashSize; j++){
-// 		if(HNext[j]!=HHead[j]){
-// 			result = 0;
-// 		}
-// 	}
+		for (int j = 0; j < SHA256HashSize; j++){
+			if(HNext[j]!=HTrackCode[i][j]){
+				result = 0;
+			}
+		}
 
-// 	if(result == 1) {
-// 		printf("\nHASH CHAIN DOS COMMITS VERIFICADA COM SUCESSO!\n");
-// 	} else {
-// 		printf("\n\nERRO! -- HASH CHAIN DOS COMMITS NAO VERIFICADA -- ERRO!\n\n");
-// 	}
+		for (int j = 0; j < SHA256HashSize; j++){
+			HCurrent[j]=HNext[j];
+			// printf("%02x ",HCurrent[j]);
+		}
+	// printf("\n\n");
 
-// 	for(int i = 0; i < numVoters; i++) {
-// 		commit_free(&com[i]);
-// 	}
+	}
+	/* Compute HHead */
+	SHA256Reset(&sha);
 
-// }
+	SHA256Input(&sha, HCurrent, SHA256HashSize);
+
+	SHA256Input(&sha, (const uint8_t*)closeSignal, strlen((char *)closeSignal));
+
+	SHA256Result(&sha, HNext);
+
+	for (int j = 0; j < SHA256HashSize; j++){
+		if(HNext[j]!=HHead[j]){
+			result = 0;
+		}
+	}
+
+	if(result == 1) {
+		printf("\n\033[32mHASH CHAIN DAS CIFRAS VERIFICADA COM SUCESSO!\033[0m\n");
+	} else {
+		printf("\n\n\033[31mERRO! -- HASH CHAIN DAS CIFRAS NAO VERIFICADA -- ERRO!\033[0m\n\n");
+	}
+
+	ec_free(publicKey);
+	for (int i = 0; i < numVoters; i++) {
+		ec_free(a[i]);
+		ec_free(b[i]);
+	}
+	bn_free(Signature[0]);
+	bn_free(Signature[1]);
+	core_clean();
+}
 
 
 // void validateZKPOutput (char ZKPOutputName[20], char ZKPSigOutputName[20], 
@@ -1261,9 +1310,9 @@ int createQRTrackingCode() {
 //                                         		 pubSignKey);
 
 // 	if (Success == 0){
-// 		printf("\nASSINATURA DO ARQUIVO DE ZKP VERIFICADA COM SUCESSO!\n");
+// 		printf("\n\033[32mASSINATURA DO ARQUIVO DE ZKP VERIFICADA COM SUCESSO!\033[0m\n");
 // 	} else {
-// 		printf("\n\nERRO! -- ASSINATURA DO ARQUIVO DE ZKP NAO VERIFICADA -- ERRO!\n\n");
+// 		printf("\n\n\033[31mERRO! -- ASSINATURA DO ARQUIVO DE ZKP NAO VERIFICADA -- ERRO!\033[0m\n\n");
 // 	}
 
 // 	/* Prover shifts the messages by rho */
@@ -1282,9 +1331,9 @@ int createQRTrackingCode() {
 // 	result = shuffle_verifier(y, _y, t, _t, u, d, s, com, _m, rho, &keyTemp, numVoters);
 
 // 	if (result == 1) {
-// 		printf("\nPROVA ZKP DE SHUFFLE VERIFICADA COM SUCESSO!\n");
+// 		printf("\n\033[32mPROVA ZKP DE SHUFFLE VERIFICADA COM SUCESSO!\033[0m\n");
 // 	} else {
-// 		printf("\n\nERRO! -- PROVA ZKP DE SHUFFLE NAO VERIFICADA -- ERRO!\n\n");
+// 		printf("\n\n\033[31mERRO! -- PROVA ZKP DE SHUFFLE NAO VERIFICADA -- ERRO!\033[0m\n\n");
 // 	}
 
 // 	nmod_poly_clear(t0);

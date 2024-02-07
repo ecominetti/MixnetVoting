@@ -8,3 +8,4 @@ rm plaintexts_*
 rm voteOutput*
 rm RDVOutput*
 rm publicKey 
+rm publicSignatureKey

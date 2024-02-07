@@ -1,16 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <sys/random.h>
 
 #define _LARGE_TIME_API
 #include <time.h>
 
-#include "./dilithium/ref/api.h"
 #include <relic/relic.h>
-
-#include "param.h"
-#include "fastrandombytes.h"
-#include "assert.h"
 #include "sha.h"
 
 /*============================================================================*/
@@ -121,7 +117,7 @@ int numberTotalvoters();
  * @param[in] RDVSigOutputName 		- Name of the file that contains the signature for the RDV file.
  * @param[in] numVoters 			- Number of voters.
  */
-// void validateRDV (char RDVOutputName[20], char RDVSigOutputName[20], int numVoters);
+void validateRDV (char RDVOutputName[20], char RDVSigOutputName[20], int numVoters);
 
 
 /**
@@ -131,7 +127,7 @@ int numberTotalvoters();
  * @param[in] voteSigOutputName 	- Name of the file that contains the signature for the voteOutput file.
  * @param[in] numVoters 			- Number of voters.
  */
-// void validateVoteOutput (char voteOutputName[20], char voteSigOutputName[20], int numVoters);
+void validateVoteOutput (char voteOutputName[20], char voteSigOutputName[20], int numVoters);
 
 
 /**
