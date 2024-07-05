@@ -107,7 +107,7 @@ int numberTotalvoters();
  * @param[in] QRSpoilNon 		- Nonce used to create the commitment, provided by the challenge.
  * @param[in] QRSpoilVot 		- Votes used to create the commitment, provided by the challenge.
  */
-// void verifyVote (uint8_t *QRTrack, uint8_t *QRSpoilTrack, uint8_t *QRSpoilNon, uint32_t *QRSpoilVot);
+void verifyVote (uint8_t *QRTrack, uint8_t *QRSpoilTrack, uint8_t *QRSpoilNon, uint32_t *QRSpoilVot);
 
 
 /**

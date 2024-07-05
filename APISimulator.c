@@ -859,133 +859,106 @@ int createQRTrackingCode() {
 
 
 
-// void verifyVote (uint8_t *QRTrack, uint8_t *QRSpoilTrack, uint8_t *QRSpoilNon, uint32_t *QRSpoilVot) {
-// 	SHA512Context sha;
-// 	commit_t tmpCom[CONTESTS];
-// 	nmod_poly_t _m[CONTESTS];
-// 	nmod_poly_t aux;
-// 	uint32_t timerInt[CONTESTS];
-// 	uint32_t coeffValue;
-// 	uint64_t *coeffs;
-// 	uint8_t newTrCode[CONTESTS][SHA512HashSize];
-// 	pcrt_poly_t rnd[CONTESTS][WIDTH];
-// 	int index;
-// 	int verified=TRUE;
+void verifyVote (uint8_t *QRTrack, uint8_t *QRSpoilTrack, uint8_t *QRSpoilNon, uint32_t *QRSpoilVot) {
+	SHA256Context sha;
+	ec_t _a[CONTESTS];
+	ec_t _b[CONTESTS];
+	ec_t P;
+	bn_t _r[CONTESTS];
+	uint8_t tempVote[4];
+	uint8_t buffer[64];
+	uint32_t timerInt[CONTESTS];
+	uint8_t newTrCode[CONTESTS][SHA256HashSize];
+	int index;
+	int verified=TRUE;
 
-// 	uint8_t QRTrackingCode[CONTESTS*(SHA512HashSize+sizeof(uint32_t))];
-// 	uint8_t QRSpoilTrackingCode[CONTESTS*SHA512HashSize];
-// 	uint8_t QRSpoilNonce[CONTESTS*WIDTH*(DEGREE/4)]; // Degree*2/8
-// 	uint32_t QRSpoilVotes[CONTESTS];
-// 	uint8_t numberActiveContests=0;
+	uint8_t QRTrackingCode[CONTESTS*(SHA256HashSize+sizeof(uint32_t))];
+	uint8_t QRSpoilTrackingCode[CONTESTS*SHA256HashSize];
+	uint8_t QRSpoilNonce[CONTESTS*32]; // Degree*2/8
+	uint32_t QRSpoilVotes[CONTESTS];
+	uint8_t numberActiveContests=0;
 
-// 	/* Initialize internal vectors with external vectors*/
-// 	for (uint8_t cont = 0; cont < CONTESTS; cont++) {
-// 			if (((numberContests >> cont) & 1) == 1) {
-// 				numberActiveContests++;
-// 			}
-// 	}
-// 	memmove(QRTrackingCode,QRTrack,numberActiveContests*(SHA512HashSize+sizeof(uint32_t)));
-// 	memmove(QRSpoilTrackingCode,QRSpoilTrack,numberActiveContests*SHA512HashSize);
-// 	memmove(QRSpoilNonce, QRSpoilNon, numberActiveContests*WIDTH*(DEGREE/4));
-// 	memmove(QRSpoilVotes, QRSpoilVot, numberActiveContests*4);
+	/* Initialize internal vectors with external vectors*/
+	for (uint8_t cont = 0; cont < CONTESTS; cont++) {
+			if (((numberContests >> cont) & 1) == 1) {
+				numberActiveContests++;
+			}
+	}
+	memmove(QRTrackingCode,QRTrack,numberActiveContests*(SHA256HashSize+sizeof(uint32_t)));
+	memmove(QRSpoilTrackingCode,QRSpoilTrack,numberActiveContests*SHA256HashSize);
+	memmove(QRSpoilNonce, QRSpoilNon, numberActiveContests*32);
+	memmove(QRSpoilVotes, QRSpoilVot, numberActiveContests*4);
 
-// 	for (uint8_t cont = 0; cont < numberActiveContests; cont++) {
-// 		nmod_poly_init(_m[cont], MODP);
-// 		nmod_poly_zero(_m[cont]);
-// 		for (int i = 0; i < WIDTH; i++) {
-// 			for (int j = 0; j < 2; j++) {
-// 				nmod_poly_init(rnd[cont][i][j], MODP);
-// 				nmod_poly_zero(rnd[cont][i][j]);
-// 			}
-// 		}
-// 		for (int i = 0; i < WIDTH; i++) {
-// 			nmod_poly_init(aux, MODP);
-// 			nmod_poly_zero(aux);
-// 			for (int coeff = 0; coeff < DEGREE; coeff++) {
-// 				index=floor(coeff/4);
-// 				coeffValue = QRSpoilNonce[cont*(WIDTH*(DEGREE*2/8))+i*(DEGREE*2/8)+index] >> (2*(coeff%4));
-// 				coeffValue &= 0x03; //only the two first bits
-// 				coeffValue += (MODP-1);
-// 				nmod_poly_set_coeff_ui(aux,coeff,coeffValue);
-// 			}
-// 			pcrt_poly_convert(rnd[cont][i], aux);
-// 			nmod_poly_zero(aux);
-// 			nmod_poly_clear(aux);
-// 		}
+	ec_null(P);
+	ec_new(P);
 
-// 		timerInt[cont] = QRTrackingCode[SHA512HashSize+cont*(SHA512HashSize+sizeof(uint32_t))] |
-// 					QRTrackingCode[SHA512HashSize+cont*(SHA512HashSize+sizeof(uint32_t))+1]<<8 |
-// 						QRTrackingCode[SHA512HashSize+cont*(SHA512HashSize+sizeof(uint32_t))+2]<<16 |
-// 							QRTrackingCode[SHA512HashSize+cont*(SHA512HashSize+sizeof(uint32_t))+3]<<24;
-// 		nmod_poly_set_coeff_ui(_m[cont], 0, QRSpoilVotes[cont]);
+	for (uint8_t cont = 0; cont < numberActiveContests; cont++) {
+		ec_null(_a[cont]);
+		ec_new(_a[cont]);
+		ec_null(_b[cont]);
+		ec_new(_b[cont]);
+		bn_null(_r[cont]);
+		bn_new(_r[cont]);
+		
+		tempVote[0]=QRSpoilVotes[cont]&0xFF;
+		tempVote[1]=(QRSpoilVotes[cont]>>8)&0xFF;
+		tempVote[2]=(QRSpoilVotes[cont]>>16)&0xFF;
+		tempVote[3]=(QRSpoilVotes[cont]>>24)&0xFF;
 
-// 		commit_doit(&tmpCom[cont], _m[cont], &key, rnd[cont]);
+		ec_map(P,tempVote,4);
+		bn_read_bin(_r[cont],(QRCodeSpoilNonce + cont*32),32);
+		
+		ec_mul_gen(_a[cont],_r[cont]);
+		ec_mul_fix(_b[cont],keyTable,_r[cont]);
+		ec_add(_b[cont],_b[cont],P);
 
-// 		/* Parse the commitment to coeffs variable */
-// 		index = 0;
-// 		coeffs = (uint64_t*)malloc(sizeof(uint64_t)*(nmod_poly_length(tmpCom[cont].c1[0])+
-// 														nmod_poly_length(tmpCom[cont].c1[1])+
-// 														nmod_poly_length(tmpCom[cont].c2[0])+
-// 															nmod_poly_length(tmpCom[cont].c2[1])));
+		ec_norm(_a[cont],_a[cont]);
+		ec_norm(_b[cont],_b[cont]);
 
-// 		for (int i = 0; i < nmod_poly_length(tmpCom[cont].c1[0]); i++){
-// 			coeffs[i] = nmod_poly_get_coeff_ui(tmpCom[cont].c1[0],i);
-// 		}
-// 		index = nmod_poly_length(tmpCom[cont].c1[0]);
-
-// 		for (int i = 0; i < nmod_poly_length(tmpCom[cont].c1[1]); i++){
-// 			coeffs[i+index] = nmod_poly_get_coeff_ui(tmpCom[cont].c1[1],i);
-// 		}
-// 		index+=nmod_poly_length(tmpCom[cont].c1[1]);
-
-// 		for (int i = 0; i < nmod_poly_length(tmpCom[cont].c2[0]); i++){
-// 			coeffs[i+index] = nmod_poly_get_coeff_ui(tmpCom[cont].c2[0],i);
-// 		}
-// 		index+=nmod_poly_length(tmpCom[cont].c2[0]);
-
-// 		for (int i = 0; i < nmod_poly_length(tmpCom[cont].c2[1]); i++){
-// 			coeffs[i+index] = nmod_poly_get_coeff_ui(tmpCom[cont].c2[1],i);
-// 		}
-// 		index+=nmod_poly_length(tmpCom[cont].c2[1]);
+		timerInt[cont] = QRTrackingCode[SHA256HashSize+cont*(SHA256HashSize+sizeof(uint32_t))] |
+					QRTrackingCode[SHA256HashSize+cont*(SHA256HashSize+sizeof(uint32_t))+1]<<8 |
+						QRTrackingCode[SHA256HashSize+cont*(SHA256HashSize+sizeof(uint32_t))+2]<<16 |
+							QRTrackingCode[SHA256HashSize+cont*(SHA256HashSize+sizeof(uint32_t))+3]<<24;
 
 
-// 		/* Compute tracking code */
-// 		SHA512Reset(&sha);
+		/* Compute tracking code */
+		SHA256Reset(&sha);
 
-// 		SHA512Input(&sha, &QRSpoilTrackingCode[cont*SHA512HashSize], SHA512HashSize);
+		SHA256Input(&sha, &QRSpoilTrackingCode[cont*SHA256HashSize], SHA256HashSize);
 
-// 		SHA512Input(&sha, (const uint8_t*)&timerInt[cont], 4);
+		SHA256Input(&sha, (const uint8_t*)&timerInt[cont], 4);
 
-// 		SHA512Input(&sha, (const uint8_t*)coeffs, index * sizeof(uint64_t));
+		fp_write_bin(buffer,32,_a[cont]->x);
+		fp_write_bin(buffer+32,32,_a[cont]->y);
+		SHA256Input(&sha, buffer, 64);
 
-// 		SHA512Result(&sha, newTrCode[cont]);
+		fp_write_bin(buffer,32,_b[cont]->x);
+		fp_write_bin(buffer+32,32,_b[cont]->y);
+		SHA256Input(&sha, buffer, 64);
 
-// 		free(coeffs);
-// 		for (int a = 0; a < SHA512HashSize; a++){
-// 			if(newTrCode[cont][a]!=QRTrackingCode[cont*(SHA512HashSize+sizeof(uint32_t))+a]) {
-// 				verified=FALSE;
-// 			}
-// 		}
-// 	}
-// 	if (verified==TRUE){
-// 		printf("(SUCESSO) Tracking Code corresponde aos votos\n");
-// 	} else {
-// 		printf("(ERRO) Tracking Code nao corresponde aos votos\n");
-// 	}
+		SHA256Result(&sha, newTrCode[cont]);
 
-// 	for (uint8_t cont = 0; cont < numberActiveContests; cont++) {
-// 		commit_free(&tmpCom[cont]);
-// 		nmod_poly_zero(_m[cont]);
-// 		nmod_poly_clear(_m[cont]);
-// 		for (int i = 0; i < WIDTH; i++) {
-// 			for (int j = 0; j < 2; j++) {
-// 				nmod_poly_zero(rnd[cont][i][j]);
-// 				nmod_poly_clear(rnd[cont][i][j]);
-// 			}
-// 		}
-// 	}
+		for (int z = 0; z < SHA256HashSize; z++){
+			if(newTrCode[cont][z]!=QRTrackingCode[cont*(SHA256HashSize+sizeof(uint32_t))+z]) {
+				verified=FALSE;
+			}
+		}
+	}
+	if (verified==TRUE){
+		printf("\033[32m(SUCESSO) Tracking Code corresponde aos votos\033[0m\n");
+	} else {
+		printf("\033[31m(ERRO) Tracking Code nao corresponde aos votos\033[0m\n");
+	}
+
+	for (uint8_t cont = 0; cont < numberActiveContests; cont++) {
+		bn_zero(_r[cont]);
+		bn_free(_r[cont]);
+		ec_free(_a[cont]);
+		ec_free(_b[cont]);
+	}
+	ec_free(P);
 	
-// }
+}
 
 void validateRDV (char RDVOutputName[20], char RDVSigOutputName[20], int numVoters){
 	FILE *SigFile;
